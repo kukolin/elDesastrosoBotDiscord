@@ -44,7 +44,7 @@ function sendLoveRequest(p1, p2, message){
   };
 
   axios.request(options).then(function (response) {
-    message.channel.send(`Entre **${response.data.fname}** y **${response.data.sname}** se podría decir que hay un **${response.data.percentage}%** de amor. Resultado: **${response.data.result}**. Que viva el amor!`)
+    message.channel.send(`Entre **${response.data.fname}** y **${response.data.sname}** se podría decir que hay un **${response.data.percentage}%** de amor. Resultado: **${response.data.result}** Que viva el amor!`)
   }).catch(function (error) {
     message.channel.send(`Hubo un error con lo solicitado. Perdón :(`)
   });
