@@ -1,3 +1,3 @@
-# tickets-bot
+EL DESASTROSO
 
-asd
+Bot para los pibes del canal
