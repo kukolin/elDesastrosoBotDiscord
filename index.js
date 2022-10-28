@@ -1,26 +1,58 @@
 const { Client, Events, GatewayIntentBits } = require('discord.js');
 const axios = require("axios");
+const fs = require('fs');
+
+const jokes = require('./jokes.json');
 
 require('dotenv').config();
+
+const randomJoke = () => {
+  return jokes[Math.floor(Math.random() * jokes.length)];
+}
 
 const client = new Client({ intents: [
   GatewayIntentBits.Guilds,
   GatewayIntentBits.GuildMessages,
   GatewayIntentBits.MessageContent,
   GatewayIntentBits.DirectMessages,
-  GatewayIntentBits.GuildMembers
+  GatewayIntentBits.GuildMembers,
+  GatewayIntentBits.GuildVoiceStates
 ]});
 
 client.once(Events.ClientReady, c => {
 	console.log(`Ready! Logged in as ${c.user.tag}`);
 });
 
+client.on('presenceUpdate', (state) => {
+  console.log(state);
+});
+
 client.on('messageCreate', (message) => {
-  if(message.content.startsWith("hola"))
+  if(message.content.toLowerCase().startsWith("hola"))
     message.channel.send(`Hola, ${message.author}! Un gusto verte. Estoy vivo y andando perfecto!`)
 
     if(message.content.startsWith("vive"))
       message.channel.send(`Siempre he vivido. Dentro del corazón de cada uno de ustedes.`)
+
+      if(message.content.toLowerCase().startsWith("random joke")){
+        var joke = randomJoke()
+        message.channel.send(joke.setup)
+        message.channel.send(joke.punchline)
+      }
+
+      if(message.content.toLowerCase().startsWith("chiste")){
+        fs.readFile('./chistes.txt', 'utf8', (err, data) => {
+        if (err) {
+          console.error(err);
+          return;
+        }
+
+        var chistes = data.split("-");
+
+        var chiste = chistes[Math.floor(Math.random() * chistes.length)];
+        message.channel.send(chiste);
+      });
+      }
 
     if(message.content.toLowerCase().startsWith("amor")){
 
