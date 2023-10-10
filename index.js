@@ -1,85 +1,55 @@
-const { Client, Events, GatewayIntentBits } = require('discord.js');
-const axios = require("axios");
-const fs = require('fs');
+const nacl = require('tweetnacl');
+var chisteService = require("chiste");
 
-const jokes = require('./jokes.json');
+exports.handler = async (event) => {
+  // Checking signature (requirement 1.)
+  // Your public key can be found on your application in the Developer Portal
+  const PUBLIC_KEY = process.env.BOT_KEY;
+  const signature = event.headers['x-signature-ed25519']
+  const timestamp = event.headers['x-signature-timestamp'];
+  const strBody = event.body; // should be string, for successful sign
 
-require('dotenv').config();
+  console.log("strBody" + strBody);
 
-const randomJoke = () => {
-  return jokes[Math.floor(Math.random() * jokes.length)];
-}
+  const isVerified = nacl.sign.detached.verify(
+    Buffer.from(timestamp + strBody),
+    Buffer.from(signature, 'hex'),
+    Buffer.from(PUBLIC_KEY, 'hex')
+  );
 
-const client = new Client({ intents: [
-  GatewayIntentBits.Guilds,
-  GatewayIntentBits.GuildMessages,
-  GatewayIntentBits.MessageContent,
-  GatewayIntentBits.DirectMessages,
-  GatewayIntentBits.GuildMembers,
-  GatewayIntentBits.GuildVoiceStates
-]});
-
-client.once(Events.ClientReady, c => {
-	console.log(`Ready! Logged in as ${c.user.tag}`);
-});
-
-client.on('presenceUpdate', (state) => {
-  console.log(state);
-});
-
-client.on('messageCreate', (message) => {
-  if(message.content.toLowerCase().startsWith("hola"))
-    message.channel.send(`Hola, ${message.author}! Un gusto verte. Estoy vivo y andando perfecto!`)
-
-    if(message.content.startsWith("vive"))
-      message.channel.send(`Siempre he vivido. Dentro del corazón de cada uno de ustedes.`)
-
-      if(message.content.toLowerCase().startsWith("random joke")){
-        var joke = randomJoke()
-        message.channel.send(joke.setup)
-        message.channel.send(joke.punchline)
-      }
-
-      if(message.content.toLowerCase().startsWith("chiste")){
-        fs.readFile('./chistes.txt', 'utf8', (err, data) => {
-        if (err) {
-          console.error(err);
-          return;
-        }
-
-        var chistes = data.split("-");
-
-        var chiste = chistes[Math.floor(Math.random() * chistes.length)];
-        message.channel.send(chiste);
-      });
-      }
-
-    if(message.content.toLowerCase().startsWith("amor")){
-
-      var primerSplit = message.content.split("-")
-      var primeraPersona = primerSplit[1].split(" ")[0]
-      var segundaPersona = primerSplit[2].split(" ")[0]
-
-      sendLoveRequest(primeraPersona, segundaPersona, message)
+  if (!isVerified) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify('invalid request signature'),
+    };
+  }
+  
+  const body = JSON.parse(strBody)
+  // Replying to ping (requirement 2.)
+  if (body.type == 1) {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ "type": 1 }),
     }
-});
-
-function sendLoveRequest(p1, p2, message){
-  const options = {
-    method: 'GET',
-    url: 'https://love-calculator.p.rapidapi.com/getPercentage',
-    params: {fname: p1, sname: p2},
-    headers: {
-      'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
-      'X-RapidAPI-Host': 'love-calculator.p.rapidapi.com'
+  }
+  if (Object.hasOwn(body.data, 'name')) {
+    if (body.data.name == 'hola') {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({"type": 4,"data": {"content": "Mi choto pa tu cola!"}}),
+        "headers": { "Content-Type": "application/json" }          
+      }
     }
-  };
+  }
 
-  axios.request(options).then(function (response) {
-    message.channel.send(`Entre **${response.data.fname}** y **${response.data.sname}** se podría decir que hay un **${response.data.percentage}%** de amor. Resultado: **${response.data.result}** Que viva el amor!`)
-  }).catch(function (error) {
-    message.channel.send(`Hubo un error con lo solicitado. Perdón :(`)
-  });
-}
-
-client.login(process.env.BOT_TOKEN);
+  if (Object.hasOwn(body.data, 'name')) {
+    if (body.data.name == 'chiste') {
+      console.log("detecta chiste");
+      return {
+        statusCode: 200,
+        body: JSON.stringify({"type": 4,"data": {"content": "Aca va un chiste: " + await chisteService.getChiste()}}),
+        "headers": { "Content-Type": "application/json" }          
+      }
+    }
+  }
+};
